@@ -1,4 +1,5 @@
 TARGET = QtWebChannel
+TARGET_SHORT = QtWebC
 QT = core-private
 CONFIG += warn_on strict_flags
 
