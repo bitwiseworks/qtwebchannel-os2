@@ -1,6 +1,6 @@
 QT = core quick webchannel-private
 
-TARGET_SHORT = webc
+TARGET_SHORT = webh
 
 INCLUDEPATH += ../../webchannel
 VPATH += ../../webchannel
