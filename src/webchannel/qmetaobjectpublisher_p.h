@@ -148,12 +148,30 @@ public:
     void sendPendingPropertyUpdates();
 
     /**
+     * Invoke the @p method on @p object with the arguments @p args.
+     *
+     * The return value of the method invocation is then serialized and a response message
+     * is returned.
+     */
+    QVariant invokeMethod(QObject *const object, const QMetaMethod &method, const QJsonArray &args);
+
+    /**
      * Invoke the method of index @p methodIndex on @p object with the arguments @p args.
      *
      * The return value of the method invocation is then serialized and a response message
      * is returned.
      */
     QVariant invokeMethod(QObject *const object, const int methodIndex, const QJsonArray &args);
+
+    /**
+     * Invoke the method of name @p methodName on @p object with the arguments @p args.
+     *
+     * This method performs overload resolution on @p methodName.
+     *
+     * The return value of the method invocation is then serialized and a response message
+     * is returned.
+     */
+    QVariant invokeMethod(QObject *const object, const QByteArray &methodName, const QJsonArray &args);
 
     /**
      * Set the value of property @p propertyIndex on @p object to @p value.
@@ -177,6 +195,26 @@ public:
     QVariant toVariant(const QJsonValue &value, int targetType) const;
 
     /**
+     * Assigns a score for the conversion from @p value to @p targetType.
+     *
+     * Scores can be compared to find the best match. The lower the score, the
+     * more preferable is the conversion.
+     *
+     * @sa invokeMethod, methodOverloadBadness
+     */
+    int conversionScore(const QJsonValue &value, int targetType) const;
+
+    /**
+     * Scores @p method against @p args.
+     *
+     * Scores can be compared to find the best match from a set of overloads.
+     * The lower the score, the more preferable is the method.
+     *
+     * @sa invokeMethod, conversionScore
+     */
+    int methodOverloadBadness(const QMetaMethod &method, const QJsonArray &args) const;
+
+    /**
      * Remove wrapped objects which last transport relation is with the passed transport object.
      */
     void transportRemoved(QWebChannelAbstractTransport *transport);
@@ -196,6 +234,14 @@ public:
      * This properly handles QML values and also wraps the result if required.
      */
     QJsonArray wrapList(const QVariantList &list, QWebChannelAbstractTransport *transport,
+                          const QString &parentObjectId = QString());
+
+    /**
+     * Convert a variant map for consumption by the client.
+     *
+     * This properly handles QML values and also wraps the result if required.
+     */
+    QJsonObject wrapMap(const QVariantMap &map, QWebChannelAbstractTransport *transport,
                           const QString &parentObjectId = QString());
 
     /**
@@ -246,18 +292,15 @@ private:
     QHash<const QObject *, QString> registeredObjectIds;
 
     // Groups individually wrapped objects with their class information and the transports that have access to it.
+    // Also tags objects that are in the process of being wrapped to prevent infinite recursion.
     struct ObjectInfo
     {
-        ObjectInfo()
-            : object(Q_NULLPTR)
-        {}
-        ObjectInfo(QObject *o, const QJsonObject &i)
-            : object(o)
-            , classinfo(i)
+        ObjectInfo(QObject *o = nullptr)
+            : object(o), isBeingWrapped(false)
         {}
         QObject *object;
-        QJsonObject classinfo;
         QVector<QWebChannelAbstractTransport*> transports;
+        bool isBeingWrapped;
     };
 
     // Map of objects wrapped from invocation returns

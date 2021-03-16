@@ -39,6 +39,19 @@
 
 #include <QtWebChannel/QWebChannelAbstractTransport>
 
+struct TestStruct
+{
+    TestStruct(int foo = 0, int bar = 0)
+        : foo(foo)
+        , bar(bar)
+    {}
+    int foo;
+    int bar;
+};
+Q_DECLARE_METATYPE(TestStruct)
+using TestStructVector = std::vector<TestStruct>;
+Q_DECLARE_METATYPE(TestStructVector)
+
 QT_BEGIN_NAMESPACE
 
 class DummyTransport : public QWebChannelAbstractTransport
@@ -136,6 +149,8 @@ signals:
     void returnedObjectChanged();
     void propChanged(const QString&);
     void replay();
+    void overloadSignal(int);
+    void overloadSignal(float);
 
 public slots:
     void slot1() {}
@@ -155,6 +170,13 @@ public slots:
 
     void setProp(const QString&prop) {emit propChanged(mProp=prop);}
     void fire() {emit replay();}
+
+    double overload(double d) { return d + 1; }
+    int overload(int i) { return i * 2; }
+    QObject *overload(QObject *object) { return object; }
+    QString overload(const QString &str) { return str.toUpper(); }
+    QString overload(const QString &str, int i) { return str.toUpper() + QString::number(i + 1); }
+    QString overload(const QJsonArray &v) { return QString::number(v[1].toInt()) + v[0].toString(); }
 
 protected slots:
     void slot3() {}
@@ -293,6 +315,10 @@ public slots:
     QJsonArray readJsonArray() const;
     void setJsonArray(const QJsonArray &v);
 
+    int readOverload(int i);
+    QString readOverload(const QString &arg);
+    QString readOverload(const QString &arg, int i);
+
 signals:
     void lastIntChanged();
     void lastBoolChanged();
@@ -308,10 +334,13 @@ private slots:
     void testDeregisterObjectAtStart();
     void testInfoForObject();
     void testInvokeMethodConversion();
+    void testFunctionOverloading();
     void testSetPropertyConversion();
+    void testInvokeMethodOverloadResolution();
     void testDisconnect();
     void testWrapRegisteredObject();
     void testUnwrapObject();
+    void testTransportWrapObjectProperties();
     void testRemoveUnusedTransports();
     void testPassWrappedObjectBack();
     void testWrapValues();
